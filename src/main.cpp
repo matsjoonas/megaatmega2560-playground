@@ -2,6 +2,7 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 #include <DHT_U.h>
+#include <math.h>
 
 DHT_Unified dht(22, DHT22);
 uint32_t delayMS;
@@ -18,15 +19,20 @@ public:
         }
     }
 
-    int * decToBinary(int n) {
-        static int binaryNum[8];
+    int *decToBinary(int n) {
+        static int binaryNum[8] = {0, 0, 0, 0, 0, 0, 0, 0};
         int i = 0;
+        int j = 0;
+        // set all bits to 0 before doing anything
+        for (j = 0; j < nrOfPins; ++j) {
+            binaryNum[j] = 0;
+        }
         while (n > 0) {
             binaryNum[i] = n % 2;
+            Serial.print(binaryNum[i]);
             n = n / 2;
             i++;
         }
-
         return binaryNum;
     }
 
@@ -131,7 +137,8 @@ void loop() {
         Serial.println(F("Error reading temperature!"));
     } else {
         Serial.print(F("Temperature: "));
-        Serial.print(event.temperature);
+        Serial.println(event.temperature);
+        temperatureLeds.write(lround(event.temperature));
         Serial.println(F("°C"));
     }
     // Get humidity event and print its value.
