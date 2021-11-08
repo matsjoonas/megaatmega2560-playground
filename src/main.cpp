@@ -29,7 +29,6 @@ public:
         }
         while (n > 0) {
             binaryNum[i] = n % 2;
-            Serial.print(binaryNum[i]);
             n = n / 2;
             i++;
         }
@@ -72,6 +71,9 @@ public:
 
 int temperatureLedPins[8] = {52, 50, 48, 46, 44, 42, 40, 38};
 LedOctet temperatureLeds(temperatureLedPins);
+
+int humidityLedPins[8] = {53, 51, 49, 47, 45, 43, 41, 39};
+LedOctet humidityLeds(humidityLedPins);
 
 
 void setup() {
@@ -124,7 +126,10 @@ void setup() {
 
     Serial.println(F("Initializing LED pins"));
     temperatureLeds.setup();
+    humidityLeds.setup();
+
     temperatureLeds.healthCheck();
+    humidityLeds.healthCheck();
 }
 
 void loop() {
@@ -148,6 +153,7 @@ void loop() {
     } else {
         Serial.print(F("Humidity: "));
         Serial.print(event.relative_humidity);
+        humidityLeds.write(lround(event.relative_humidity));
         Serial.println(F("%"));
     }
 }
