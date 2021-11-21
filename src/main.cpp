@@ -31,6 +31,7 @@ private:
     int totalBitLength = 8;
     uint16_t borderColor;
     uint16_t bgColor;
+    bool isFirstDraw = true;
 
 public:
     explicit BinaryDisplay(int16_t x, int16_t y, int16_t w, int16_t h, int16_t nrOfBitsToDraw, uint16_t color, uint16_t backgroundColor) {
@@ -73,12 +74,18 @@ public:
         int i;
         for (i = 0; i < amountOfBitsToDraw; ++i) {
             // we only need to draw if newstate is different from the old state
+            int newBit = newState[totalBitLength - i - 1];
+            int oldBit = state[totalBitLength - i - 1];
 
-            if (newState[totalBitLength - i - 1] == 1) {
-                tft.fillRect(x, y, rectW, rectH, borderColor);
-            } else {
-                tft.fillRect(x, y, rectW, rectH, bgColor);
-                tft.drawRect(x, y, rectW, rectH, borderColor);
+            // we need to draw al the bits in case of first render
+            // afterwards we can update only the places that have changed
+            if (newBit != oldBit || isFirstDraw) {
+                if (newBit == 1) {
+                    tft.fillRect(x, y, rectW, rectH, borderColor);
+                } else {
+                    tft.fillRect(x, y, rectW, rectH, bgColor);
+                    tft.drawRect(x, y, rectW, rectH, borderColor);
+                }
             }
 
             x = x - (rectW + gapSize);
@@ -90,6 +97,7 @@ public:
             state[j] = newState[j];
         }
 
+        isFirstDraw = false;
     }
 
     void show(int n) {
