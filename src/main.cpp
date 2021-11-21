@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <Adafruit_Sensor.h>
+#include <DHT.h>
+#include <DHT_U.h>
 #include <math.h>
 #include <Adafruit_GFX.h> // Core graphics library
 #include <Fonts/FreeSansBold9pt7b.h>
@@ -257,43 +259,63 @@ void tftPrintTest() {
     tft.print(" seconds.");
 }
 
-BinaryDisplay testDisplay8 = BinaryDisplay(100, 25, 8, 12, 8, ST77XX_YELLOW, BG_COLOR);
-BinaryDisplay testDisplay4 = BinaryDisplay(100, 65, 8, 12, 4, ST77XX_CYAN, BG_COLOR);
+BinaryDisplay temperatureDisplay = BinaryDisplay(100, 25, 8, 12, 8, ST77XX_YELLOW, BG_COLOR);
+BinaryDisplay humidityDisplay = BinaryDisplay(100, 65, 8, 12, 8, ST77XX_CYAN, BG_COLOR);
 DateDisplay dateDisplay = DateDisplay(17, 100, ST77XX_WHITE, BG_COLOR);
 TimeDisplay timeDisplay = TimeDisplay(15, 130, ST77XX_WHITE, BG_COLOR);
 
 
 void healthCheck() {
     // run health check
-    testDisplay8.show(1);
-    delay(300);
-    testDisplay8.show(2);
-    delay(300);
-    testDisplay8.show(4);
-    delay(300);
-    testDisplay8.show(8);
-    delay(300);
-    testDisplay8.show(16);
-    delay(300);
-    testDisplay8.show(32);
-    delay(300);
-    testDisplay8.show(64);
-    delay(300);
-    testDisplay8.show(128);
-    delay(300);
-    testDisplay8.show(255);
-    delay(300);
-    testDisplay4.show(1);
-    delay(300);
-    testDisplay4.show(2);
-    delay(300);
-    testDisplay4.show(4);
-    delay(300);
+
 }
+
+DHT_Unified dht(22, DHT22);
 
 void setup(void) {
     Serial.begin(9600);
-    delay(2000);
+
+    sensor_t sensor;
+    dht.temperature().getSensor(&sensor);
+    Serial.println(F("------------------------------------"));
+    Serial.println(F("Temperature Sensor"));
+    Serial.print(F("Sensor Type: "));
+    Serial.println(sensor.name);
+    Serial.print(F("Driver Ver:  "));
+    Serial.println(sensor.version);
+    Serial.print(F("Unique ID:   "));
+    Serial.println(sensor.sensor_id);
+    Serial.print(F("Max Value:   "));
+    Serial.print(sensor.max_value);
+    Serial.println(F("°C"));
+    Serial.print(F("Min Value:   "));
+    Serial.print(sensor.min_value);
+    Serial.println(F("°C"));
+    Serial.print(F("Resolution:  "));
+    Serial.print(sensor.resolution);
+    Serial.println(F("°C"));
+    Serial.println(F("------------------------------------"));
+    // Print humidity sensor details.
+    dht.humidity().getSensor(&sensor);
+    Serial.println(F("Humidity Sensor"));
+    Serial.print(F("Sensor Type: "));
+    Serial.println(sensor.name);
+    Serial.print(F("Driver Ver:  "));
+    Serial.println(sensor.version);
+    Serial.print(F("Unique ID:   "));
+    Serial.println(sensor.sensor_id);
+    Serial.print(F("Max Value:   "));
+    Serial.print(sensor.max_value);
+    Serial.println(F("%"));
+    Serial.print(F("Min Value:   "));
+    Serial.print(sensor.min_value);
+    Serial.println(F("%"));
+    Serial.print(F("Resolution:  "));
+    Serial.print(sensor.resolution);
+    Serial.println(F("%"));
+    Serial.println(F("------------------------------------"));
+    // Set delay between sensor readings based on sensor details.
+    delayMS = sensor.min_delay / 1000;
 
     if (!rtc.begin()) {
         Serial.println("Couldn't find RTC. Make sure that you've connected the RTC to the correct pins");
@@ -304,7 +326,9 @@ void setup(void) {
     Serial.println("Let's set the time!");
     // When time needs to be set on a new device, or after a power loss, the
     // following line sets the RTC to the date & time this sketch was compiled
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+
+    //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+
     // This line sets the RTC with an explicit date & time, for example to set
     // January 21, 2014 at 3am you would call:
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
@@ -329,8 +353,8 @@ void setup(void) {
     tft.setCursor(60, 50);
     tft.println("Humidity");
 
-    testDisplay8.show(0);
-    testDisplay4.show(0);
+    temperatureDisplay.show(0);
+    humidityDisplay.show(0);
 
     delay(500);
 
@@ -339,7 +363,40 @@ void setup(void) {
     Serial.println("done");
 }
 
+
+struct task {
+    unsigned long rate;
+    unsigned long previous;
+};
+
+task taskA = {.rate = delayMS, .previous = 0};
+
 void loop() {
+    if (taskA.previous == 0 || (millis() - taskA.previous > taskA.rate)) {
+        taskA.previous = millis();
+
+        sensors_event_t event;
+        dht.temperature().getEvent(&event);
+        if (isnan(event.temperature)) {
+            Serial.println(F("Error reading temperature!"));
+        } else {
+            Serial.print(F("Temperature: "));
+            Serial.println(event.temperature);
+            temperatureDisplay.show(lround(event.temperature));
+            Serial.println(F("°C"));
+        }
+        // Get humidity event and print its value.
+        dht.humidity().getEvent(&event);
+        if (isnan(event.relative_humidity)) {
+            Serial.println(F("Error reading humidity!"));
+        } else {
+            Serial.print(F("Humidity: "));
+            Serial.print(event.relative_humidity);
+            humidityDisplay.show(lround(event.relative_humidity));
+            Serial.println(F("%"));
+        }
+    }
+
     DateTime now = rtc.now();
     timeDisplay.show(now.hour(), now.minute(), now.second());
     dateDisplay.show(now.year(), now.month(), now.day());
