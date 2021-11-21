@@ -6,6 +6,7 @@
 #include <Adafruit_ST7735.h> // Hardware-specific library
 #include <SPI.h>
 #include <Wire.h>
+#include <RTClib.h>
 
 #define TFT_CS    10
 #define TFT_RST   8
@@ -14,11 +15,25 @@
 #define TFT_SCLK 13
 #define TFT_MOSI 11
 
+#define BG_COLOR ST77XX_BLACK
+
 uint32_t delayMS;
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
 
 float p = 3.1415926;
+
+RTC_DS3231 rtc;
+char daysOfTheWeek[7][12] = {
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday"
+};
+
 
 class BinaryDisplay {
 private:
@@ -34,7 +49,8 @@ private:
     bool isFirstDraw = true;
 
 public:
-    explicit BinaryDisplay(int16_t x, int16_t y, int16_t w, int16_t h, int16_t nrOfBitsToDraw, uint16_t color, uint16_t backgroundColor) {
+    explicit BinaryDisplay(int16_t x, int16_t y, int16_t w, int16_t h, int16_t nrOfBitsToDraw, uint16_t color,
+                           uint16_t backgroundColor) {
         startX = x;
         startY = y;
         rectW = w;
@@ -67,9 +83,6 @@ public:
         int16_t x = startX;
         int16_t y = startY;
         int16_t gapSize = 4;
-
-        Serial.print("y: ");
-        Serial.println(y);
 
         int i;
         for (i = 0; i < amountOfBitsToDraw; ++i) {
@@ -105,148 +118,105 @@ public:
     }
 };
 
-BinaryDisplay testDisplay8 = BinaryDisplay(100, 10, 8, 12, 8, ST77XX_WHITE, ST77XX_BLACK);
-BinaryDisplay testDisplay4 = BinaryDisplay(100, 25, 8, 12, 4, ST77XX_WHITE, ST77XX_BLACK);
+class TimeDisplay {
+private:
+    int16_t startX;
+    int16_t startY;
+    uint16_t textColor;
+    uint16_t bgColor;
+    int currentHour = 0;
+    int currentMinute = 0;
+    int currentSecond = 0;
 
-
-
-
-
-
-
-
-
-
-
-
-void testlines(uint16_t color) {
-    tft.fillScreen(ST77XX_BLACK);
-    for (int16_t x = 0; x < tft.width(); x += 6) {
-        tft.drawLine(0, 0, x, tft.height() - 1, color);
-        delay(0);
-    }
-    for (int16_t y = 0; y < tft.height(); y += 6) {
-        tft.drawLine(0, 0, tft.width() - 1, y, color);
-        delay(0);
+public:
+    explicit TimeDisplay(int16_t x, int16_t y, uint16_t color, uint16_t backgroundColor) {
+        startX = x;
+        startY = y;
+        textColor = color;
+        bgColor = backgroundColor;
     }
 
-    tft.fillScreen(ST77XX_BLACK);
-    for (int16_t x = 0; x < tft.width(); x += 6) {
-        tft.drawLine(tft.width() - 1, 0, x, tft.height() - 1, color);
-        delay(0);
-    }
-    for (int16_t y = 0; y < tft.height(); y += 6) {
-        tft.drawLine(tft.width() - 1, 0, 0, y, color);
-        delay(0);
-    }
 
-    tft.fillScreen(ST77XX_BLACK);
-    for (int16_t x = 0; x < tft.width(); x += 6) {
-        tft.drawLine(0, tft.height() - 1, x, 0, color);
-        delay(0);
-    }
-    for (int16_t y = 0; y < tft.height(); y += 6) {
-        tft.drawLine(0, tft.height() - 1, tft.width() - 1, y, color);
-        delay(0);
-    }
-
-    tft.fillScreen(ST77XX_BLACK);
-    for (int16_t x = 0; x < tft.width(); x += 6) {
-        tft.drawLine(tft.width() - 1, tft.height() - 1, x, 0, color);
-        delay(0);
-    }
-    for (int16_t y = 0; y < tft.height(); y += 6) {
-        tft.drawLine(tft.width() - 1, tft.height() - 1, 0, y, color);
-        delay(0);
-    }
-}
-
-void testdrawtext(char *text, uint16_t color) {
-    tft.setCursor(0, 0);
-    tft.setTextColor(color);
-    tft.setTextWrap(true);
-    tft.print(text);
-}
-
-void testfastlines(uint16_t color1, uint16_t color2) {
-    tft.fillScreen(ST77XX_BLACK);
-    for (int16_t y = 0; y < tft.height(); y += 5) {
-        tft.drawFastHLine(0, y, tft.width(), color1);
-    }
-    for (int16_t x = 0; x < tft.width(); x += 5) {
-        tft.drawFastVLine(x, 0, tft.height(), color2);
-    }
-}
-
-void testdrawrects(uint16_t color) {
-    tft.fillScreen(ST77XX_BLACK);
-    for (int16_t x = 0; x < tft.width(); x += 6) {
-        tft.drawRect(tft.width() / 2 - x / 2, tft.height() / 2 - x / 2, x, x, color);
-    }
-}
-
-void testfillrects(uint16_t color1, uint16_t color2) {
-    tft.fillScreen(ST77XX_BLACK);
-    for (int16_t x = tft.width() - 1; x > 6; x -= 6) {
-        tft.fillRect(tft.width() / 2 - x / 2, tft.height() / 2 - x / 2, x, x, color1);
-        tft.drawRect(tft.width() / 2 - x / 2, tft.height() / 2 - x / 2, x, x, color2);
-    }
-}
-
-void testfillcircles(uint8_t radius, uint16_t color) {
-    for (int16_t x = radius; x < tft.width(); x += radius * 2) {
-        for (int16_t y = radius; y < tft.height(); y += radius * 2) {
-            tft.fillCircle(x, y, radius, color);
+    void draw(int hour, int minute, int second) {
+        if (currentHour != hour) {
+            tft.fillRect(startX, startY, 27, 17, bgColor);
         }
-    }
-}
-
-void testdrawcircles(uint8_t radius, uint16_t color) {
-    for (int16_t x = 0; x < tft.width() + radius; x += radius * 2) {
-        for (int16_t y = 0; y < tft.height() + radius; y += radius * 2) {
-            tft.drawCircle(x, y, radius, color);
+        if (currentMinute != minute) {
+            tft.fillRect(startX + 35, startY, 27, 17, bgColor);
         }
-    }
-}
-
-void testtriangles() {
-    tft.fillScreen(ST77XX_BLACK);
-    uint16_t color = 0xF800;
-    int t;
-    int w = tft.width() / 2;
-    int x = tft.height() - 1;
-    int y = 0;
-    int z = tft.width();
-    for (t = 0; t <= 15; t++) {
-        tft.drawTriangle(w, y, y, x, z, x, color);
-        x -= 4;
-        y += 4;
-        z -= 4;
-        color += 100;
-    }
-}
-
-void testroundrects() {
-    tft.fillScreen(ST77XX_BLACK);
-    uint16_t color = 100;
-    int i;
-    int t;
-    for (t = 0; t <= 4; t += 1) {
-        int x = 0;
-        int y = 0;
-        int w = tft.width() - 2;
-        int h = tft.height() - 2;
-        for (i = 0; i <= 16; i += 1) {
-            tft.drawRoundRect(x, y, w, h, 5, color);
-            x += 2;
-            y += 3;
-            w -= 4;
-            h -= 6;
-            color += 1100;
+        if (currentSecond != second) {
+            tft.fillRect(startX + 70, startY, 27, 17, bgColor);
         }
-        color += 100;
+
+        tft.setCursor(startX, startY);
+        tft.setTextColor(textColor);
+        tft.setTextSize(2);
+        tft.print(hour, HEX);
+        tft.print(":");
+        tft.print(minute, HEX);
+        tft.print(":");
+        tft.print(second, HEX);
+
+        currentHour = hour;
+        currentMinute = minute;
+        currentSecond = second;
     }
-}
+
+    void show(int hour, int minute, int second) {
+        draw(hour, minute, second);
+    }
+};
+
+class DateDisplay {
+private:
+    int16_t startX;
+    int16_t startY;
+    uint16_t textColor;
+    uint16_t bgColor;
+    int currentYear = 0;
+    int currentMonth = 0;
+    int currentDay = 0;
+
+public:
+    explicit DateDisplay(int16_t x, int16_t y, uint16_t color, uint16_t backgroundColor) {
+        startX = x;
+        startY = y;
+        textColor = color;
+        bgColor = backgroundColor;
+    }
+
+
+    void draw(int year, int month, int day) {
+        if (currentYear != year) {
+            tft.fillRect(startX, startY, 37, 17, bgColor);
+        }
+
+        if (currentMonth != month) {
+            tft.fillRect(startX + 46, startY, 16, 17, bgColor);
+        }
+
+        if (currentDay != day) {
+            tft.fillRect(startX + 70, startY, 27, 17, bgColor);
+        }
+
+        tft.setCursor(startX, startY);
+        tft.setTextColor(textColor);
+        tft.setTextSize(2);
+        tft.print(year, HEX);
+        tft.print(".");
+        tft.print(month, HEX);
+        tft.print(".");
+        tft.print(day, HEX);
+
+        currentYear = year;
+        currentMonth = month;
+        currentDay = day;
+    }
+
+    void show(int hour, int minute, int second) {
+        draw(hour, minute, second);
+    }
+};
 
 void tftPrintTest() {
     tft.setTextWrap(false);
@@ -287,44 +257,14 @@ void tftPrintTest() {
     tft.print(" seconds.");
 }
 
-void mediabuttons() {
-    // play
-    tft.fillScreen(ST77XX_BLACK);
-    tft.fillRoundRect(25, 10, 78, 60, 8, ST77XX_WHITE);
-    tft.fillTriangle(42, 20, 42, 60, 90, 40, ST77XX_RED);
-    delay(500);
-    // pause
-    tft.fillRoundRect(25, 90, 78, 60, 8, ST77XX_WHITE);
-    tft.fillRoundRect(39, 98, 20, 45, 5, ST77XX_GREEN);
-    tft.fillRoundRect(69, 98, 20, 45, 5, ST77XX_GREEN);
-    delay(500);
-    // play color
-    tft.fillTriangle(42, 20, 42, 60, 90, 40, ST77XX_BLUE);
-    delay(50);
-    // pause color
-    tft.fillRoundRect(39, 98, 20, 45, 5, ST77XX_RED);
-    tft.fillRoundRect(69, 98, 20, 45, 5, ST77XX_RED);
-    // play color
-    tft.fillTriangle(42, 20, 42, 60, 90, 40, ST77XX_GREEN);
-}
+BinaryDisplay testDisplay8 = BinaryDisplay(100, 25, 8, 12, 8, ST77XX_YELLOW, BG_COLOR);
+BinaryDisplay testDisplay4 = BinaryDisplay(100, 65, 8, 12, 4, ST77XX_CYAN, BG_COLOR);
+DateDisplay dateDisplay = DateDisplay(17, 100, ST77XX_WHITE, BG_COLOR);
+TimeDisplay timeDisplay = TimeDisplay(15, 130, ST77XX_WHITE, BG_COLOR);
 
-void setup(void) {
-    Serial.begin(9600);
-    Serial.print(F("Hello! ST77xx TFT Test"));
-    tft.initR(INITR_BLACKTAB);
 
-    Serial.println(F("Initialized"));
-
-    uint16_t time = millis();
-    tft.fillScreen(ST77XX_BLACK);
-    time = millis() - time;
-
-    Serial.println(time, DEC);
-    delay(500);
-    Serial.println("done");
-}
-
-void loop() {
+void healthCheck() {
+    // run health check
     testDisplay8.show(1);
     delay(300);
     testDisplay8.show(2);
@@ -349,6 +289,61 @@ void loop() {
     delay(300);
     testDisplay4.show(4);
     delay(300);
-    testDisplay4.show(8);
+}
+
+void setup(void) {
+    Serial.begin(9600);
+    delay(2000);
+
+    if (!rtc.begin()) {
+        Serial.println("Couldn't find RTC. Make sure that you've connected the RTC to the correct pins");
+        Serial.flush();
+        abort();
+    }
+
+    Serial.println("Let's set the time!");
+    // When time needs to be set on a new device, or after a power loss, the
+    // following line sets the RTC to the date & time this sketch was compiled
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    // This line sets the RTC with an explicit date & time, for example to set
+    // January 21, 2014 at 3am you would call:
+    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+
+
+    // When time needs to be re-set on a previously configured device, the
+    // following line sets the RTC to the date & time this sketch was compiled
+    // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    // This line sets the RTC with an explicit date & time, for example to set
+    // January 21, 2014 at 3am you would call:
+    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+
+    Serial.print(F("ST77xx TFT Test"));
+    tft.initR(INITR_BLACKTAB);
+    Serial.println(F("Initialized"));
+
+    tft.setCursor(42, 10);
+    tft.fillScreen(ST77XX_BLACK);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.setTextSize(0);
+    tft.println("Temperature");
+    tft.setCursor(60, 50);
+    tft.println("Humidity");
+
+    testDisplay8.show(0);
+    testDisplay4.show(0);
+
+    delay(500);
+
+
+    //Check();
+    Serial.println("done");
+}
+
+void loop() {
+    DateTime now = rtc.now();
+    timeDisplay.show(now.hour(), now.minute(), now.second());
+    dateDisplay.show(now.year(), now.month(), now.day());
+
+    delay(200);
 }
 
