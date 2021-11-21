@@ -24,11 +24,11 @@ class BinaryDisplay {
 private:
     int16_t startX;
     int16_t startY;
-    int16_t totalW;
-    int16_t totalH;
+    int16_t rectW;
+    int16_t rectH;
     int16_t amountOfBitsToDraw;
     int state[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    int bitLength = 8;
+    int totalBitLength = 8;
     uint16_t borderColor;
     uint16_t bgColor;
 
@@ -36,8 +36,8 @@ public:
     explicit BinaryDisplay(int16_t x, int16_t y, int16_t w, int16_t h, int16_t nrOfBitsToDraw, uint16_t color, uint16_t backgroundColor) {
         startX = x;
         startY = y;
-        totalW = w;
-        totalH = h;
+        rectW = w;
+        rectH = h;
         amountOfBitsToDraw = nrOfBitsToDraw;
         borderColor = color;
         bgColor = backgroundColor;
@@ -48,11 +48,11 @@ public:
         int i = 0;
         int j = 0;
         // set all bits to 0 before doing anything
-        for (j = 0; j < bitLength; ++j) {
+        for (j = 0; j < totalBitLength; ++j) {
             binaryNum[j] = 0;
         }
         while (n > 0) {
-            binaryNum[i] = n % 2;
+            binaryNum[totalBitLength - i - 1] = n % 2;
             n = n / 2;
             i++;
         }
@@ -61,33 +61,33 @@ public:
 
 
     void draw(int n) {
-        int *newBinArray = decToBinary(n);
+        int *newState = decToBinary(n);
 
         int16_t x = startX;
         int16_t y = startY;
         int16_t gapSize = 4;
-        int16_t totalGapSpace = (amountOfBitsToDraw - 1) * gapSize;
-        int16_t rectW = (totalW - totalGapSpace) / amountOfBitsToDraw;
-        int16_t rectH = totalH;
+
+        Serial.print("y: ");
+        Serial.println(y);
 
         int i;
         for (i = 0; i < amountOfBitsToDraw; ++i) {
             // we only need to draw if newstate is different from the old state
 
-            if (newBinArray[i] == 1) {
+            if (newState[totalBitLength - i - 1] == 1) {
                 tft.fillRect(x, y, rectW, rectH, borderColor);
             } else {
                 tft.fillRect(x, y, rectW, rectH, bgColor);
                 tft.drawRect(x, y, rectW, rectH, borderColor);
             }
 
-            x = x + rectW + gapSize;
+            x = x - (rectW + gapSize);
         }
 
         // update state
         int j;
-        for (j = 0; j < bitLength; ++j) {
-            state[j] = newBinArray[j];
+        for (j = 0; j < totalBitLength; ++j) {
+            state[j] = newState[j];
         }
 
     }
@@ -95,18 +95,21 @@ public:
     void show(int n) {
         draw(n);
     }
-
-    void healthCheck() {
-        int i;
-        int checkValues[8] = {1, 2, 4, 8, 16, 32, 64, 128};
-        for (i = 0; i < bitLength; ++i) {
-            show(checkValues[i]);
-            delay(500);
-        }
-    }
 };
 
-BinaryDisplay testDisplay = BinaryDisplay(10, 10, 60, 10, 8, ST77XX_WHITE, ST77XX_BLACK);
+BinaryDisplay testDisplay8 = BinaryDisplay(100, 10, 8, 12, 8, ST77XX_WHITE, ST77XX_BLACK);
+BinaryDisplay testDisplay4 = BinaryDisplay(100, 25, 8, 12, 4, ST77XX_WHITE, ST77XX_BLACK);
+
+
+
+
+
+
+
+
+
+
+
 
 void testlines(uint16_t color) {
     tft.fillScreen(ST77XX_BLACK);
@@ -310,67 +313,34 @@ void setup(void) {
 
     Serial.println(time, DEC);
     delay(500);
-
-    testDisplay.healthCheck();
-    /*
-    // large block of text
-    tft.fillScreen(ST77XX_BLACK);
-    testdrawtext("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur adipiscing ante sed nibh tincidunt feugiat. Maecenas enim massa, fringilla sed malesuada et, malesuada sit amet turpis. Sed porttitor neque ut ante pretium vitae malesuada nunc bibendum. Nullam aliquet ultrices massa eu hendrerit. Ut sed nisi lorem. In vestibulum purus a tortor imperdiet posuere. ", ST77XX_WHITE);
-    delay(100);
-
-
-    // tft print function!
-    tftPrintTest();
-    delay(4000);
-
-    // a single pixel
-    //tft.drawPixel(tft.width()/2, tft.height()/2, ST77XX_GREEN);
-
-    delay(500);
-
-    // line draw test
-    testlines(ST77XX_YELLOW);
-    delay(500);
-
-    // optimized lines
-    testfastlines(ST77XX_RED, ST77XX_BLUE);
-    delay(500);
-
-    testdrawrects(ST77XX_GREEN);
-    delay(500);
-
-    testfillrects(ST77XX_YELLOW, ST77XX_MAGENTA);
-    delay(500);
-
-    tft.fillScreen(ST77XX_BLACK);
-    testfillcircles(10, ST77XX_BLUE);
-    testdrawcircles(10, ST77XX_WHITE);
-    delay(500);
-
-    testroundrects();
-    delay(500);
-
-    testtriangles();
-    delay(500);
-
-    mediabuttons();
-    delay(500);
-     */
-
     Serial.println("done");
-    delay(1000);
 }
 
 void loop() {
-    testDisplay.show(1);
-    delay(1000);
-    testDisplay.show(2);
-    delay(1000);
-    testDisplay.show(4);
-    delay(1000);
-    testDisplay.show(8);
-    delay(1000);
-    testDisplay.show(16);
-    delay(1000);
+    testDisplay8.show(1);
+    delay(300);
+    testDisplay8.show(2);
+    delay(300);
+    testDisplay8.show(4);
+    delay(300);
+    testDisplay8.show(8);
+    delay(300);
+    testDisplay8.show(16);
+    delay(300);
+    testDisplay8.show(32);
+    delay(300);
+    testDisplay8.show(64);
+    delay(300);
+    testDisplay8.show(128);
+    delay(300);
+    testDisplay8.show(255);
+    delay(300);
+    testDisplay4.show(1);
+    delay(300);
+    testDisplay4.show(2);
+    delay(300);
+    testDisplay4.show(4);
+    delay(300);
+    testDisplay4.show(8);
 }
 
