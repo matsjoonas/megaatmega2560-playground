@@ -10,12 +10,12 @@
 #include <Wire.h>
 #include <RTClib.h>
 
-#define TFT_CS    10
-#define TFT_RST   8
-#define TFT_DC    9
+#define TFT_CS    53
+#define TFT_RST   49
+#define TFT_DC    48
 
-#define TFT_SCLK 13
-#define TFT_MOSI 11
+#define TFT_SCLK 52
+#define TFT_MOSI 51
 
 #define BG_COLOR ST77XX_BLACK
 
